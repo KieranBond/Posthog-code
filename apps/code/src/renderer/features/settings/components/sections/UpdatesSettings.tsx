@@ -21,6 +21,7 @@ export function UpdatesSettings() {
   const { data: autoDownload } = useQuery(
     trpcReact.updates.getAutoDownload.queryOptions(),
   );
+  const [autoDownloadEnabled, setAutoDownloadEnabled] = useState(true);
   const [updateStatus, setUpdateStatus] = useState<{
     message?: string;
     type?: "info" | "success" | "error";
@@ -76,6 +77,12 @@ export function UpdatesSettings() {
     }
   }, [handleCheckForUpdates]);
 
+  useEffect(() => {
+    if (typeof autoDownload?.enabled === "boolean") {
+      setAutoDownloadEnabled(autoDownload.enabled);
+    }
+  }, [autoDownload?.enabled]);
+
   useSubscription(
     trpcReact.updates.onStatus.subscriptionOptions(undefined, {
       onData: (status) => {
@@ -115,18 +122,29 @@ export function UpdatesSettings() {
         description="When enabled, checks and downloads updates automatically on startup."
       >
         <Switch
-          checked={autoDownload?.enabled ?? true}
+          checked={autoDownloadEnabled}
           onCheckedChange={(checked) => {
-            const previous = autoDownload?.enabled ?? true;
+            const previous = autoDownloadEnabled;
             if (previous === checked) return;
 
+            setAutoDownloadEnabled(checked);
             track(ANALYTICS_EVENTS.SETTING_CHANGED, {
               setting_name: "auto_download_updates",
               old_value: previous,
               new_value: checked,
             });
 
-            void setAutoDownloadMutation.mutateAsync({ enabled: checked });
+            setAutoDownloadMutation.mutate(
+              { enabled: checked },
+              {
+                onError: () => {
+                  setAutoDownloadEnabled(previous);
+                },
+                onSuccess: (result) => {
+                  setAutoDownloadEnabled(result.enabled);
+                },
+              },
+            );
           }}
           disabled={setAutoDownloadMutation.isPending}
         />
