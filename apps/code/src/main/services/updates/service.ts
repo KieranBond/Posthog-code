@@ -100,7 +100,13 @@ export class UpdatesService extends TypedEventEmitter<UpdatesEvents> {
   }
 
   setAutoDownloadUpdatesEnabled(enabled: boolean): void {
+    const previous = this.autoDownloadUpdatesEnabled;
     setAutoDownloadUpdatesEnabled(enabled);
+
+    log.info("Auto-download updates setting changed", {
+      previous,
+      current: enabled,
+    });
   }
 
   triggerMenuCheck(): void {
@@ -211,7 +217,12 @@ export class UpdatesService extends TypedEventEmitter<UpdatesEvents> {
         () => this.checkForUpdates("periodic"),
         UpdatesService.CHECK_INTERVAL_MS,
       );
+      return;
     }
+
+    log.info(
+      "Auto-download updates disabled; skipping startup and periodic checks",
+    );
   }
 
   private handleError(error: Error): void {

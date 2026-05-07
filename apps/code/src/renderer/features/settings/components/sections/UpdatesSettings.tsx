@@ -2,8 +2,10 @@ import { SettingRow } from "@features/settings/components/SettingRow";
 import { CheckCircle, XCircle } from "@phosphor-icons/react";
 import { Badge, Button, Flex, Spinner, Switch, Text } from "@radix-ui/themes";
 import { useTRPC } from "@renderer/trpc";
+import { ANALYTICS_EVENTS } from "@shared/types/analytics";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { useSubscription } from "@trpc/tanstack-react-query";
+import { track } from "@utils/analytics";
 import { logger } from "@utils/logger";
 import { useCallback, useEffect, useRef, useState } from "react";
 
@@ -115,6 +117,15 @@ export function UpdatesSettings() {
         <Switch
           checked={autoDownload?.enabled ?? true}
           onCheckedChange={(checked) => {
+            const previous = autoDownload?.enabled ?? true;
+            if (previous === checked) return;
+
+            track(ANALYTICS_EVENTS.SETTING_CHANGED, {
+              setting_name: "auto_download_updates",
+              old_value: previous,
+              new_value: checked,
+            });
+
             void setAutoDownloadMutation.mutateAsync({ enabled: checked });
           }}
           disabled={setAutoDownloadMutation.isPending}
