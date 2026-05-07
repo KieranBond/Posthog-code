@@ -9,6 +9,10 @@ import { logger } from "../../utils/logger";
 import { TypedEventEmitter } from "../../utils/typed-event-emitter";
 import type { AppLifecycleService } from "../app-lifecycle/service";
 import {
+  getAutoDownloadUpdatesEnabled,
+  setAutoDownloadUpdatesEnabled,
+} from "../settingsStore";
+import {
   type CheckForUpdatesOutput,
   type InstallUpdateOutput,
   UpdatesEvent,
@@ -89,6 +93,14 @@ export class UpdatesService extends TypedEventEmitter<UpdatesEvents> {
       this.mainWindow.onFocus(() => this.flushPendingNotification()),
     );
     this.appLifecycle.whenReady().then(() => this.setupAutoUpdater());
+  }
+
+  get autoDownloadUpdatesEnabled(): boolean {
+    return getAutoDownloadUpdatesEnabled();
+  }
+
+  setAutoDownloadUpdatesEnabled(enabled: boolean): void {
+    setAutoDownloadUpdatesEnabled(enabled);
   }
 
   triggerMenuCheck(): void {
@@ -191,14 +203,15 @@ export class UpdatesService extends TypedEventEmitter<UpdatesEvents> {
       ),
     );
 
-    // Perform initial check (periodic source — not user-initiated)
-    this.checkForUpdates("periodic");
+    // Perform initial check and periodic checks only when auto-download is enabled
+    if (this.autoDownloadUpdatesEnabled) {
+      this.checkForUpdates("periodic");
 
-    // Set up periodic checks
-    this.checkIntervalId = setInterval(
-      () => this.checkForUpdates("periodic"),
-      UpdatesService.CHECK_INTERVAL_MS,
-    );
+      this.checkIntervalId = setInterval(
+        () => this.checkForUpdates("periodic"),
+        UpdatesService.CHECK_INTERVAL_MS,
+      );
+    }
   }
 
   private handleError(error: Error): void {
